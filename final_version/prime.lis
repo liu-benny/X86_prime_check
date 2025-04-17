@@ -1,0 +1,67 @@
+     1                                  ; Benny Liu ID 40287238
+     2                                  
+     3                                  section .data
+     4 00000000 06                              number db 6
+     5 00000001 01                              answer db 1
+     6                                  
+     7 00000002 4E756D626572206973-             prime_msg db 'Number is prime', 0x0a
+     7 0000000B 207072696D650A     
+     8                                          prime_msg_length equ $-prime_msg
+     9                                  
+    10 00000012 4E756D626572206973-     	not_prime_msg db 'Number is NOT prime', 0x0a     
+    10 0000001B 204E4F54207072696D-
+    10 00000024 650A               
+    11                                          not_prime_msg_length equ $-not_prime_msg
+    12                                  
+    13                                  section .bss
+    14                                  
+    15                                  section .text
+    16                                          global _start
+    17                                  
+    18                                  _start:
+    19 00000000 B302                            mov bl, 2 ; sets the first divisor
+    20                                  
+    21                                  primeCheck:
+    22 00000002 A0[00000000]                    mov al, [number]
+    23 00000007 38C3                            cmp bl, al
+    24 00000009 7D16                            jge checkAnswer      ; if divisor >= number then go to end
+    25                                  
+    26 0000000B 30E4                            xor ah, ah        ; this clears the high byte to make sure ax = number
+    27                                  
+    28                                  	
+    29 0000000D F6F3                            div bl            ; performs ax / bl = al , remainder in ah
+    30                                  
+    31 0000000F 80FC00                          cmp ah, 0	  ; checks if remainder == 0
+    32 00000012 7509                            jne nextDivisor
+    33                                  
+    34 00000014 C605[01000000]00                mov byte[answer], 0 ; puts 0 in 'answer' if not prime
+    35 0000001B EB04                            jmp checkAnswer
+    36                                  
+    37                                  nextDivisor:
+    38 0000001D FEC3                            inc bl		    ; increments divisor
+    39 0000001F EBE1                            jmp primeCheck
+    40                                  
+    41                                  checkAnswer:
+    42 00000021 B804000000              	mov eax, 4
+    43 00000026 BB01000000                      mov ebx, 1
+    44 0000002B 803D[01000000]01                cmp byte[answer], 1        
+    45 00000032 7402                            je printPrime
+    46 00000034 EB0E                            jmp printNotPrime
+    47                                  
+    48                                  printPrime:
+    49 00000036 B9[02000000]                    mov ecx, prime_msg
+    50 0000003B BA10000000                      mov edx, prime_msg_length
+    51 00000040 CD80                            int 80h
+    52 00000042 EB0E                            jmp _exit
+    53                                  
+    54                                  printNotPrime:
+    55 00000044 B9[12000000]                    mov ecx, not_prime_msg
+    56 00000049 BA14000000                      mov edx, not_prime_msg_length
+    57 0000004E CD80                            int 80h
+    58 00000050 EB00                            jmp _exit
+    59                                  
+    60                                  _exit:
+    61 00000052 B801000000                      mov eax, 1
+    62 00000057 BB00000000                      mov ebx, 0
+    63 0000005C CD80                            int 80h
+    64                                  
