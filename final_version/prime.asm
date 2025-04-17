@@ -39,7 +39,7 @@ nextDivisor:
         jmp primeCheck	    ; restart loop
 
 checkAnswer:
-		mov eax, 4
+	mov eax, 4
         mov ebx, 1
 
         cmp byte[answer], 1        
