@@ -1,0 +1,88 @@
+     1                                  ; prime_check.asm
+     2                                  ; Assemble with: nasm -f elf32 prime_check.asm
+     3                                  ; Link with: ld -m elf_i386 -s -o prime_check prime_check.o
+     4                                  
+     5                                  
+     6                                  section .data
+     7 00000000 06                          number          db 6               ; change this to test other values
+     8 00000001 01                          answer          db 1               ; 1 = prime (default). Initialized here and remains 1 if no divisor ever sets it to 0
+     9                                  
+    10 00000002 4E756D626572206973-         prime_msg       db 'Number is prime', 0x0a
+    10 0000000B 207072696D650A     
+    11                                      prime_len       equ $ - prime_msg  ; length of prime_msg: sys_write needs the byte count in EDX
+    12                                  
+    13 00000012 4E756D626572206973-         not_prime_msg   db 'Number is NOT prime', 0x0a
+    13 0000001B 204E4F54207072696D-
+    13 00000024 650A               
+    14                                      not_prime_len   equ $ - not_prime_msg  ; length of not_prime_msg for sys_write
+    15                                  
+    16                                  section .text
+    17                                      global _start
+    18                                  
+    19                                  _start:
+    20                                      ; Initialize divisor = 2
+    21 00000000 B102                        mov     cl, 2
+    22                                  
+    23                                  PrimeLoop:
+    24                                      ; load number into AL for compare and dividend
+    25 00000002 A0[00000000]                mov     al, [number]    ; AL = number
+    26                                  
+    27                                      ; if divisor >= number, we’re done
+    28 00000007 38C1                        cmp     cl, al          ; compare divisor and number
+    29 00000009 7D18                        jge     PrintResult
+    30                                  
+    31                                      ; prepare AX = number for division (AL holds number)
+    32 0000000B 30E4                        xor     ah, ah          ; clear AH so AX = number
+    33                                  
+    34                                      ; divide AX by divisor
+    35 0000000D 88CB                        mov     bl, cl          ; BL = divisor
+    36 0000000F F6F3                        div     bl              ; AX / BL -> AL = quotient, AH = remainder
+    37                                  
+    38 00000011 80FC00                      cmp     ah, 0           ; remainder == 0?
+    39 00000014 7509                        jne     NextDivisor
+    40                                  
+    41                                      ; not prime: set answer = 0
+    42 00000016 C605[01000000]00            mov     byte [answer], 0    ; store 0 into 'answer' to indicate number is NOT prime
+    43 0000001D EB04                        jmp     PrintResult         ; exit loop and print result
+    44                                  
+    45                                  NextDivisor:
+    46 0000001F FEC1                        inc     cl               ; next divisor
+    47 00000021 EBDF                        jmp     PrimeLoop
+    48                                  
+    49                                  PrintResult:
+    50                                      ; branch on answer: if answer == 1, print prime_msg; else print not_prime_msg
+    51 00000023 803D[01000000]01            cmp     byte [answer], 1    ; test if answer equals 1
+    52 0000002A 7402                        je      PrintPrimeMsg
+    53 0000002C EB18                        jmp     PrintNotPrimeMsg
+    54                                  
+    55                                  ; ----------------------------
+    56                                  ; print "Number is prime"
+    57                                  ; uses: eax, ebx, ecx, edx
+    58                                  ; ----------------------------
+    59                                  PrintPrimeMsg:
+    60 0000002E B804000000                  mov     eax, 4           ; sys_write syscall
+    61 00000033 BB01000000                  mov     ebx, 1           ; file descriptor: stdout
+    62 00000038 B9[02000000]                mov     ecx, prime_msg   ; pointer to string
+    63 0000003D BA10000000                  mov     edx, prime_len   ; message length (sys_write needs length)
+    64 00000042 CD80                        int     0x80        ; invoke interrupt 0x80 (hex 0x80 == 80h)
+    65 00000044 EB18                        jmp _exit
+    66                                  
+    67                                  ; ----------------------------
+    68                                  ; print "Number is NOT prime"
+    69                                  ; uses: eax, ebx, ecx, edx
+    70                                  ; ----------------------------
+    71                                  PrintNotPrimeMsg:
+    72 00000046 B804000000                  mov     eax, 4           ; sys_write syscall
+    73 0000004B BB01000000                  mov     ebx, 1           ; stdout
+    74 00000050 B9[12000000]                mov     ecx, not_prime_msg
+    75 00000055 BA14000000                  mov     edx, not_prime_len  ; length for sys_write
+    76 0000005A CD80                        int     0x80        ; invoke interrupt 0x80 (hex 0x80 == 80h)
+    77 0000005C EB00                        jmp _exit
+    78                                  
+    79                                  ; ----------------------------
+    80                                  ; exit
+    81                                  ; ----------------------------
+    82                                  _exit:
+    83 0000005E B801000000                  mov     eax, 1           ; sys_exit
+    84 00000063 31DB                        xor     ebx, ebx         ; return code = 0
+    85 00000065 CD80                        int     0x80        ; invoke interrupt 0x80 (hex 0x80 == 80h)
